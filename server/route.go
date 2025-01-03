@@ -17,7 +17,7 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func NewRouter(r *gin.Engine, db *gorm.DB, g *grpc.Server) {
+func NewRouter(r *gin.Engine, db *gorm.DB, grpcClient *grpc.ClientConn, grpcServer *grpc.Server) {
 	logger := logger.NewlogHandler()
 
 	// api := r.Group("/v1")
@@ -25,14 +25,16 @@ func NewRouter(r *gin.Engine, db *gorm.DB, g *grpc.Server) {
 	// 	// untuk memanfaatkan api versioning, uncomment dan pakai ini
 	// }
 
+	grpcUserService := pb.NewUserServiceClient(grpcClient)
+
 	dbTrxRepo := dbTrxRepository.NewDBTrxRepository(db)
 
 	userRepo := userRepository.NewUserRepository(db)
-	userSrv := userService.NewUserService(userRepo, dbTrxRepo, logger)
+	userSrv := userService.NewUserService(userRepo, dbTrxRepo, grpcUserService, logger)
 	userHdlr := userHandler.NewUserHandler(userSrv)
 
 	grpcUserHandler := userHandler.NewUserGrpcHandler(userSrv)
-	pb.RegisterUserServiceServer(g, grpcUserHandler)
+	pb.RegisterUserServiceServer(grpcServer, grpcUserHandler)
 
 	swaggerRoute := r.Group("/")
 	{
@@ -48,6 +50,9 @@ func NewRouter(r *gin.Engine, db *gorm.DB, g *grpc.Server) {
 			user.POST("/login", userHdlr.Login)
 			user.PUT("", middleware.Authorization, userHdlr.Update)
 			user.DELETE("", middleware.Authorization, userHdlr.Delete)
+
+			// Sampel API yang akan memanggil servis eksternal via gRPC
+			user.POST("/register/grpc", userHdlr.RegisterWithGrpc)
 		}
 		// tambah route lainnya disini
 	}

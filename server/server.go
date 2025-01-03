@@ -12,6 +12,7 @@ import (
 	"github.com/levensspel/go-gin-template/middleware"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
 func Start() error {
@@ -26,9 +27,22 @@ func Start() error {
 	r := gin.Default()
 	r.Use(middleware.EnableCORS)
 
+	extGrpcHost := os.Getenv("EXTERNAL_GRPC_HOST")
+	extGrpcPort := os.Getenv("EXTERNAL_GRPC_PORT")
+	if extGrpcHost == "" || extGrpcPort == "" {
+		log.Fatalf("did not connect: %v", helper.ErrInvalidEnvKey)
+	}
+	extAddr := fmt.Sprintf("%s:%s", extGrpcHost, extGrpcPort)
+
+	grpcClient, err := grpc.NewClient(extAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		log.Fatalf("did not connect: %v", err)
+	}
+	defer grpcClient.Close()
+
 	grpcServer := grpc.NewServer()
 
-	NewRouter(r, db, grpcServer)
+	NewRouter(r, db, grpcClient, grpcServer)
 
 	r.Use(gin.Recovery())
 

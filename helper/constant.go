@@ -14,7 +14,11 @@ const (
 	UserServiceLogin      FunctionCaller = "userService.Login"
 	UserServiceUpdate     FunctionCaller = "userService.Update"
 	UserServiceDeleteByID FunctionCaller = "userService.DeleteById"
+
+	GrpcUserServiceRegister FunctionCaller = "grpcUserService.RegisterUser"
 )
+
+var ErrInvalidEnvKey = errors.New("invalid environment key")
 
 var ErrorBadRequest = errors.New("invalid request format")
 var ErrorNotFound = errors.New("data not found")

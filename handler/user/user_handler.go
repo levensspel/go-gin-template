@@ -14,6 +14,8 @@ type UserHandler interface {
 	Login(ctx *gin.Context)
 	Update(ctx *gin.Context)
 	Delete(ctx *gin.Context)
+
+	RegisterWithGrpc(ctx *gin.Context) // Sampel API yang memanggil servis external via gRPC
 }
 
 type handler struct {
@@ -141,4 +143,41 @@ func (h handler) Delete(ctx *gin.Context) {
 
 	message := map[string]interface{}{"message": "your account has been successfully deleted"}
 	ctx.JSON(http.StatusOK, helper.NewResponse(message, nil))
+}
+
+// Register new user with a call to an external service via gRPC
+// @Tags users
+// @Summary Register new user
+// @Description Register the new user
+// @Accept json
+// @Produce json
+// @Param data body dto.RequestRegister true "data"
+// @Success 201 {object} helper.Response{data=helper.Response} "CREATED"
+// @Failure 400 {object} helper.Response{errors=helper.ErrorResponse} "Bad Request"
+// @Failure 409 {object} helper.Response{errors=helper.ErrorResponse} "data conflict, like email already exist"
+// @Router /users/register [POST]
+func (h handler) RegisterWithGrpc(ctx *gin.Context) {
+	input := new(dto.RequestRegister)
+
+	err := ctx.ShouldBindJSON(&input)
+	if err != nil {
+		ctx.JSON(http.StatusUnprocessableEntity, helper.NewResponse(nil, err))
+		return
+	}
+
+	// Sampel handler yang memiliki alur memanggil servis eksternal via gRPC
+	response, err := h.service.RegisterUserWithGrpc(*input)
+
+	if err != nil {
+		ctx.JSON(
+			helper.GetErrorStatusCode(err),
+			helper.NewResponse(
+				helper.GetErrorStatusCode(err),
+				err,
+			),
+		)
+		return
+	}
+
+	ctx.JSON(http.StatusCreated, helper.NewResponse(response, err))
 }
