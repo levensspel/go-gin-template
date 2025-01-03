@@ -5,18 +5,19 @@ import (
 	userHandler "github.com/levensspel/go-gin-template/handler/user"
 	"github.com/levensspel/go-gin-template/logger"
 	"github.com/levensspel/go-gin-template/middleware"
+	pb "github.com/levensspel/go-gin-template/proto"
 	dbTrxRepository "github.com/levensspel/go-gin-template/repository/db_trx"
 	userRepository "github.com/levensspel/go-gin-template/repository/user"
 	userService "github.com/levensspel/go-gin-template/service/user"
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
 
-	
 	_ "github.com/levensspel/go-gin-template/docs"
-    ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/files"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-func NewRouter(r *gin.Engine, db *gorm.DB) {
+func NewRouter(r *gin.Engine, db *gorm.DB, g *grpc.Server) {
 	logger := logger.NewlogHandler()
 
 	// api := r.Group("/v1")
@@ -30,7 +31,10 @@ func NewRouter(r *gin.Engine, db *gorm.DB) {
 	userSrv := userService.NewUserService(userRepo, dbTrxRepo, logger)
 	userHdlr := userHandler.NewUserHandler(userSrv)
 
-	swaggerRoute := r.Group("/") 
+	grpcUserHandler := userHandler.NewUserGrpcHandler(userSrv)
+	pb.RegisterUserServiceServer(g, grpcUserHandler)
+
+	swaggerRoute := r.Group("/")
 	{
 		//Route untuk Swagger
 		swaggerRoute.GET("swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
@@ -45,9 +49,6 @@ func NewRouter(r *gin.Engine, db *gorm.DB) {
 			user.PUT("", middleware.Authorization, userHdlr.Update)
 			user.DELETE("", middleware.Authorization, userHdlr.Delete)
 		}
-    	// tambah route lainnya disini 
+		// tambah route lainnya disini
 	}
-
-	
-	
 }
