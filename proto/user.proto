@@ -6,7 +6,6 @@ option go_package = "github.com/levensspel/go-gin-template/proto";
 
 service UserService {
   rpc RegisterUser(RequestRegister) returns (ResponseRegister) {}
-  rpc Login(ResponseRegister) returns (ResponseRegister) {}
 }
 
 message RequestRegister {
