@@ -7,6 +7,8 @@ import (
 type FunctionCaller string
 
 const (
+	ENV_PRODUCTION = "PRODUCTION"
+
 	UserRepoCreate FunctionCaller = "userRepo.Create"
 	DbTrxRepoBegin FunctionCaller = "dbTrxRepo.Begin"
 

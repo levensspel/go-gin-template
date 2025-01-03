@@ -12,6 +12,7 @@ import (
 	"github.com/levensspel/go-gin-template/middleware"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
@@ -40,7 +41,21 @@ func Start() error {
 	}
 	defer grpcClient.Close()
 
-	grpcServer := grpc.NewServer()
+	var grpcServer *grpc.Server
+
+	sslCert := os.Getenv("SSL_CERT_PATH")
+	sslKey := os.Getenv("SSL_KEY_PATH")
+
+	if sslCert != "" && sslKey != "" {
+		creds, err := credentials.NewServerTLSFromFile(sslCert, sslKey)
+		if err != nil {
+			log.Fatalf("Failed to load certificates: %v", err)
+		}
+
+		grpcServer = grpc.NewServer(grpc.Creds(creds))
+	} else {
+		grpcServer = grpc.NewServer()
+	}
 
 	NewRouter(r, db, grpcClient, grpcServer)
 
@@ -56,15 +71,12 @@ func Start() error {
 	appEnv := os.Getenv("MODE")
 
 	switch appEnv {
-	case "PRODUCTION":
-		gin.SetMode(gin.ReleaseMode)
-
-		sslCert := os.Getenv("SSL_CERT_PATH")
-		sslKey := os.Getenv("SSL_KEY_PATH")
-
+	case helper.ENV_PRODUCTION:
 		if sslCert == "" || sslKey == "" {
 			log.Fatal("SSL certificates not configured")
 		}
+
+		gin.SetMode(gin.ReleaseMode)
 
 		host := os.Getenv("PROD_HOST")
 		err := r.RunTLS(
